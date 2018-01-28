@@ -1,0 +1,598 @@
+---
+title: "Data_Exploration"
+author: "Kole"
+date: "1/1/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+##Data_Exploration
+Now, Let's get started! First, read in the training and testing data with the function, read.csv().
+```{r}
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(stats)
+library(ggplot2)
+#install.packages("broom")#Install it first, if needed.
+library(broom)
+
+TV <- read.csv("data/Training_values.csv")
+TL <- read.csv("data/Training_labels.csv")
+TrainingData <- merge(TV, TL, by="row_id")
+TestValues <- read.csv("data/Test_values.csv")
+#AllData <- bind_rows(TrainingData, TestValues)
+AllValues <- rbind(TV, TestValues)
+```
+Have a look at the structure of data with str().
+```{r}
+str(TrainingData)
+```
+
+Have a quick look at all the features in training data with summary().
+```{r}
+summary(TrainingData)
+#summary(TestValues)
+```
+
+##Categorical Variables
+1. A brief look at "area__rucc"(ftr), then simplify and reorder it.
+```{r}
+sum(is.na(TrainingData$area__rucc))#check if there is NA in "others" from the result above.
+sum(is.na(TestValues$area__rucc))
+table(TrainingData$area__rucc)
+TrainingData <- TrainingData %>% mutate(area__rucc_sim = factor(ifelse(area__rucc == "Metro - Counties in metro areas of 1 million population or more", "Metro_1", ifelse(area__rucc == "Metro - Counties in metro areas of 250,000 to 1 million population", "Metro_2", ifelse(area__rucc == "Metro - Counties in metro areas of fewer than 250,000 population", "Metro_3", ifelse(area__rucc == "Nonmetro - Urban population of 20,000 or more, adjacent to a metro area", "Nonmetro_1", ifelse(area__rucc == "Nonmetro - Urban population of 20,000 or more, not adjacent to a metro area", "Nonmetro_2", ifelse(area__rucc == "Nonmetro - Urban population of 2,500 to 19,999, adjacent to a metro area", "Nonmetro_3", ifelse(area__rucc == "Nonmetro - Urban population of 2,500 to 19,999, not adjacent to a metro area", "Nonmetro_4", ifelse(area__rucc == "Nonmetro - Completely rural or less than 2,500 urban population, adjacent to a metro area", "Nonmetro_5", "Nonmetro_6")))))))))) 
+table(TrainingData$area__rucc_sim)
+```
+So basicly,
+Metro_1    : Metro - Counties in metro areas of 1 million population or more;
+Metro_2    : Metro - Counties in metro areas of 250,000 to 1 million population;
+Metro_3    : Metro - Counties in metro areas of fewer than 250,000 population;
+Nonmetro_1 : Nonmetro - Urban population of 20,000 or more, adjacent to a metro area;
+Nonmetro_2 : Nonmetro - Urban population of 20,000 or more, not adjacent to a metro area;
+Nonmetro_3 : Nonmetro - Urban population of 2,500 to 19,999, adjacent to a metro area;
+Nonmetro_4 : Nonmetro - Urban population of 2,500 to 19,999, not adjacent to a metro area;
+Nonmetro_5 : Nonmetro - Completely rural or less than 2,500 urban population, adjacent to a metro area;
+Nonmetro_6 : Nonmetro - Completely rural or less than 2,500 urban population, not adjacent to a metro area.
+
+2. A brief look at "area__urban_influence"(ftr), then simplify and reorder it.
+```{r}
+sum(is.na(TrainingData$area__urban_influence))
+sum(is.na(TestValues$area__urban_influence))
+table(TrainingData$area__urban_influence)
+TrainingData <- TrainingData %>% mutate(area__ubif_sim = factor(ifelse(area__urban_influence == "Large-in a metro area with at least 1 million residents or more", "Metropolitan_L", ifelse(area__urban_influence == "Small-in a metro area with fewer than 1 million residents", "Metropolitan_S", ifelse(area__urban_influence == "Micropolitan adjacent to a large metro area", "Micropolitan_L", ifelse(area__urban_influence == "Micropolitan adjacent to a small metro area", "Micropolitan_S", ifelse(area__urban_influence == "Micropolitan not adjacent to a metro area", "Micropolitan_X", ifelse(area__urban_influence == "Noncore adjacent to a large metro area", "Noncore_L", ifelse(area__urban_influence == "Noncore adjacent to a small metro with town of at least 2,500 residents", "Noncore_S1",ifelse(area__urban_influence == "Noncore adjacent to a small metro and does not contain a town of at least 2,500 residents", "Noncore_S2", ifelse(area__urban_influence == "Noncore adjacent to micro area and contains a town of 2,500-19,999 residents", "Noncore_W1", ifelse(area__urban_influence == "Noncore adjacent to micro area and does not contain a town of at least 2,500 residents", "Noncore_W2",ifelse(area__urban_influence == "Noncore not adjacent to a metro/micro area and contains a town of 2,500  or more residents", "Noncore_X1", "Noncore_X2")))))))))))))
+table(TrainingData$area__ubif_sim)
+```
+So basicly, 
+Metropolitan_L : Large-in a metro area with at least 1 million residents or more;
+Metropolitan_S : Small-in a metro area with fewer than 1 million residents;
+Micropolitan_L : Micropolitan adjacent to a large metro area;
+Micropolitan_S : Micropolitan adjacent to a small metro area;
+Micropolitan_X : Micropolitan not adjacent to a metro area;
+Noncore_L      : Noncore adjacent to a large metro area;
+Noncore_S1     : Noncore adjacent to a small metro with town of at least 2,500 residents;
+Noncore_S2     : Noncore adjacent to a small metro and does not contain a town of at least 2,500 residents;
+Noncore_W1     : Noncore adjacent to micro area and contains a town of 2,500-19,999 residents;
+Noncore_W2     : Noncore adjacent to micro area and does not contain a town of at least 2,500 residents;
+Noncore_X1     : Noncore not adjacent to a metro/micro area and contains a town of 2,500  or more residents;
+Noncore_X2     : Noncore not adjacent to a metro/micro area and does not contain a town of at least 2,500 residents.
+
+3. Make a contingency table of "area__rucc_sim" and "area__ubif_sim" to see if they somewhat related.
+```{r}
+#table(TrainingData$area__ubif_sim, TrainingData$area__rucc_sim)
+prop.table(table(TrainingData$area__ubif_sim, TrainingData$area__rucc_sim),2)
+prop.table(table(TrainingData$area__ubif_sim, TrainingData$area__rucc_sim),1)
+```
+Visualization helps, to some extend clearify their relation.
+```{r}
+TrainingData %>% select("area__rucc_sim", "area__ubif_sim") %>% ggplot(aes(x=area__ubif_sim, fill=area__rucc_sim)) + geom_histogram(stat="count", alpha=0.8)
+
+TrainingData %>% select("area__rucc_sim", "area__ubif_sim") %>% ggplot(aes(x=area__rucc_sim, fill=area__ubif_sim)) + geom_bar(alpha=0.8)
+
+#mosaicplot(table(TrainingData$area__rucc_sim, TrainingData$area__ubif_sim), main="rucc by ubif", shade=TRUE, las=2)
+#library(vcd)
+#mosaic(area__rucc_sim~area__ubif_sim, data=TrainingData, shade=TRUE, #labeling=labeling_border(rot_labels=c(90,0,0,0), just_labels=c("left","center","center","center")))
+```
+In the proportion table, we can see that, for metro area, "area__rucc_sim" gives slightly more information than "area__ubif_sim"; on the other hand, for non-metro area, "area__ubif_sim" gives more information for telling counties adjacent to micro from those not adjacent to metro. Furthermore, for non-metro area, things get a bit messy however order-preserving between Nonmetro_1, _3 and _5, and also Nonmetro_2, _4 and _6.
+
+4. An obvious difference between area__rucc and area_urban_influence is the notion, Micropolitan. However, is micropolitan really important?
+```{r}
+TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% group_by(MmN) %>% summarize(n(), median(poverty_rate), mean(poverty_rate))
+
+#par(mfrow=c(2,1))
+TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% group_by(MmN) %>% ggplot(aes(x=MmN, y=poverty_rate)) + geom_boxplot() + coord_flip()
+#TrainingData %>% mutate(MN = factor(gsub("_[1-6]","", area__rucc_sim))) %>% group_by(MN) %>% ggplot(aes(x=MN, y=poverty_rate)) + geom_boxplot() + coord_flip()
+TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% filter(MmN != "Metropolitan") %>% ggplot(aes(x=poverty_rate, fill=MmN)) + geom_density(bw=3, alpha=0.5)
+```
+The distribution of poverty rate among micropolitan is somehow similar to that among non-metro. (From the training data, even though the median poverty rate of micropolitan is higher than that of non-metro, but due to outliers, the mean poverty rate of non-metro is higher than that of micropolitan.)
+
+Hypothesis test: Does micropolitan have different poverty rate from non-metro?
+```{r}
+#library(statsr)
+rep_sample_n <- function(tbl, size, replace = FALSE, reps = 1)
+{
+    n <- nrow(tbl)
+    i <- unlist(replicate(reps, sample.int(n, size, replace = replace), simplify = FALSE))
+    rep_tbl <- cbind(replicate = rep(1:reps,rep(size,reps)), tbl[i, , drop=FALSE])
+    dplyr::group_by(rep_tbl, replicate)
+}
+
+mN <- TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% select("MmN", "poverty_rate") %>% filter(MmN != "Metropolitan") 
+#mN %>% rep_sample_n(size=nrow(mN), reps=10000) %>% mutate(poverty_rate_perm = sample(poverty_rate)) %>% group_by(replicate, MmN) %>% summarize(med_pr_perm = median(poverty_rate_perm), med_pr_orig = median(poverty_rate)) %>% summarize(diff_perm = diff(med_pr_perm), diff_orig = diff(med_pr_orig)) %>% ggplot(aes(x=diff_perm)) + geom_histogram(binwidth=0.05) + geom_vline(aes(xintercept=diff_orig),col="red") 
+mN_perm <- mN %>% rep_sample_n(size=nrow(mN), reps=10000) %>% mutate(poverty_rate_perm = sample(poverty_rate)) %>% group_by(replicate, MmN) %>% summarize(mean_pr_perm = mean(poverty_rate_perm), mean_pr_orig = mean(poverty_rate)) %>% summarize(diff_perm = diff(mean_pr_perm), diff_orig = diff(mean_pr_orig)) 
+mN_perm %>% ggplot(aes(x=diff_perm)) + geom_histogram(binwidth=0.05) + geom_vline(aes(xintercept=diff_orig),col="red") + geom_vline(aes(xintercept=quantile(diff_perm, p=0.025)),col="blue") + geom_vline(aes(xintercept=quantile(diff_perm, p=0.975)),col="blue")
+#mN_perm %>% summarize(q.05=quantile(diff_perm, p=0.05), q.95=quantile(diff_perm, p=0.95))
+```
+So I would first consider classifying counties as metro or non-metro in the modeling process later on, instead of metropolitan, micropolitan and noncore. But there other factors hidden in area__rucc and area__urban_influence, namely population and adjacency.
+
+5.
+#Population
+Does population make any difference in poverty rate among metropolitan counties? If so, is it necessary to divide "Metropolitan_S"(in area__ubif_sim) into "Metro_2" and "Metro_3"(in area__rucc_sim)?
+```{r}
+TrainingData %>% filter(area__ubif_sim %in% c("Metropolitan_L", "Metropolitan_S")) %>% group_by(area__ubif_sim) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), min(poverty_rate))
+TrainingData %>% filter(area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% group_by(area__rucc_sim) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), min(poverty_rate))
+TrainingData %>% filter(area__ubif_sim %in% c("Metropolitan_L", "Metropolitan_S")) %>% ggplot(aes(x=poverty_rate, fill=area__ubif_sim)) + geom_density(bw=2, alpha=0.5)
+TrainingData %>% filter(area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% ggplot(aes(x=poverty_rate, fill=area__rucc_sim)) + geom_density(bw=2, alpha=0.5)
+```
+To answer the second question regarding population of metro area, let's do another hypothesis test.
+```{r}
+M2M3 <- TrainingData %>% filter(area__rucc_sim %in% c("Metro_2", "Metro_3")) %>% select("area__rucc_sim", "poverty_rate")
+M2M3_perm <- M2M3 %>% rep_sample_n(size=nrow(M2M3), reps=20000) %>% mutate(poverty_rate_perm = sample(poverty_rate)) %>% group_by(replicate, area__rucc_sim) %>% summarize(mean_pr_perm = mean(poverty_rate_perm), mean_pr_orig = mean(poverty_rate)) %>% summarize(diff_perm = diff(mean_pr_perm), diff_orig = diff(mean_pr_orig))
+M2M3_perm %>% ggplot(aes(x=diff_perm)) + geom_histogram(binwidth=0.05) + geom_vline(aes(xintercept=diff_orig),col="red") + geom_vline(aes(xintercept=quantile(diff_perm, p=0.025)),col="blue") + geom_vline(aes(xintercept=quantile(diff_perm, p=0.975)),col="blue")
+```
+So I'd better follow the 3-category classification from area__rucc, instead of the 2-category classification from area_urban_influence, for metropolitan counties.
+
+Does population make any difference in poverty rate among non-metro counties?
+```{r}
+temp <- TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% mutate(pop_size = factor(ifelse(area__rucc_sim %in% c("Nonmetro_1", "Nonmetro_2"), "L", ifelse(area__rucc_sim %in% c("Nonmetro_3", "Nonmetro_4"), "M", "S")))) %>% select("pop_size", "poverty_rate")
+temp %>% group_by(pop_size) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate)) 
+temp %>% ggplot(aes(x=pop_size, y=poverty_rate)) + geom_boxplot() + coord_flip()
+temp %>% ggplot(aes(x=poverty_rate, fill=pop_size)) + geom_density(bw=2, alpha=0.5)
+##TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% filter(area__rucc_sim %in% c("Nonmetro_1", "Nonmetro_3", "Nonmetro_5")) %>% group_by(area__rucc_sim) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+##TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% filter(area__rucc_sim %in% c("Nonmetro_2", "Nonmetro_4", "Nonmetro_6")) %>% group_by(area__rucc_sim) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+##TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% filter(area__rucc_sim %in% c("Nonmetro_1", "Nonmetro_3", "Nonmetro_5")) %>% ggplot(aes(y=poverty_rate, x=area__rucc_sim)) + geom_boxplot() + coord_flip()
+##TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% filter(area__rucc_sim %in% c("Nonmetro_2", "Nonmetro_4", "Nonmetro_6")) %>% ggplot(aes(y=poverty_rate, x=area__rucc_sim)) + geom_boxplot() + coord_flip()
+```
+It's seems hard to decide this time, so I'd like to apply ANOVA followed by pairwise-comparison using Tukey Honest Significance Difference with TukeyHSD():
+```{r}
+print("summary of ANOVA:")
+summary(aov(poverty_rate~pop_size, data=temp))
+print("Tukey Honest Significance Difference")
+TukeyHSD(aov(poverty_rate~pop_size, data=temp))
+
+##data135 <- TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% filter(area__rucc_sim %in% c("Nonmetro_1", "Nonmetro_3", "Nonmetro_5")) %>% select("area__rucc_sim", "poverty_rate")
+##print("ANOVA: Nonmetro_1, _3 and _5")
+##summary(aov(poverty_rate ~ area__rucc_sim, data=data135))
+
+##data246 <- TrainingData %>% filter(!area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% filter(area__rucc_sim %in% c("Nonmetro_2", "Nonmetro_4", "Nonmetro_6")) %>% select("area__rucc_sim", "poverty_rate")
+##print("ANOVA: Nonmetro_2, _4 and _6")
+##summary(aov(poverty_rate ~ area__rucc_sim, data=data246))
+```
+But ANOVA is under the assumption of homogeneity and normality, let's check if those conditions are met:
+```{r}
+print("check for homogeneity:")
+plot(aov(poverty_rate~pop_size, data=temp), 1)
+library(car)
+leveneTest(poverty_rate~pop_size, data=temp)
+print("check for normality:")
+plot(aov(poverty_rate~pop_size, data=temp), 2)
+shapiro.test(x=residuals(object=aov(poverty_rate~pop_size, data=temp)))
+```
+Clearly, both conditions are not met. Thank god I haven't gone too far on the wrong track. Instead of ANOVA, I'd like to apply Kruskal-Wallis rank sum test using kruskal.test() and carry out a paired 2-sample t-test using pairwise.t.test() with adjusted p-value from Benjamin-Hochberg method and seperated variances:
+```{r}
+kruskal.test(poverty_rate~pop_size, data=temp)
+pairwise.t.test(temp$poverty_rate, temp$pop_size, p.adjusted.method = "BH", pool.sd=FALSE)
+```
+Take the result from above, I'd like to combine "L" and "M" into one category to decrease the dimension.
+
+6.
+#Adjacency
+Does adjacency make any difference? Since population is yet viewed as a key player in predicting poverty rate, the following discussion about adjacency will base on the condition of population size.
+```{r}
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_1","Nonmetro_2","Nonmetro_3","Nonmetro_4")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_1","Nonmetro_3"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
+temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_1","Nonmetro_2")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_1"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
+temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_3","Nonmetro_4")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_3"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
+temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_5","Nonmetro_6")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_5"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
+temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+```
+
+7. A brief look at econ__economic_typology:
+```{r}
+sum(is.na(TrainingData$econ__economic_typology))
+sum(is.na(TestValues$econ__economic_typology))
+TrainingData %>% group_by(econ__economic_typology) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+TrainingData %>% select("econ__economic_typology", "poverty_rate") %>% ggplot(aes(y=poverty_rate, x=econ__economic_typology)) + geom_boxplot() + coord_flip()
+TrainingData %>% select("econ__economic_typology", "poverty_rate") %>% ggplot(aes(x=poverty_rate, fill=econ__economic_typology)) + geom_density(bw=2, alpha=0.5) 
+```
+##Numerical Variables
+So far, I have gone through all the categorical variables. Now it's time to focus on the numerical. Basically, all the numerical variables come from three divisions: Economics, Health and Demographics. Within each of the three divisions, there are a dozen or so numerical variables. To avoid the curse of dimension, I'd like to do some anterior feature selection or feature engineering in each division.
+
+1. Economics
+```{r}
+(Economics_div <- grep("econ__pct(.+)", names(TrainingData), value=TRUE))
+temp <- TrainingData %>% select(Economics_div, "poverty_rate")
+fmla <- as.formula(paste("~",paste(names(temp), collapse="+")))
+#spm_1: scatterplotMatrix()
+library(car)
+scatterplotMatrix(fmla, data=temp, main="Numerical Variables in Economics",smoother=FALSE)
+#spm_2: pairs()
+panel.cor <- function(x, y, digits=2, prefix="", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y, use="complete.obs"))
+    txt <- format(c(r, 0.123456789), digits=digits)[1]
+    txt <- paste(prefix, txt, sep="")
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+pairs(fmla, data=temp, lower.panel=panel.smooth, upper.panel=panel.cor, pch=20, main="Numerical Variables in Economics")
+#spm_3: cpairs()
+library(gclus)
+tmp.r <- abs(cor(temp, use="complete.obs"))
+tmp.col <- dmat.color(tmp.r)
+tmp.ord <- order.single(tmp.r)
+cpairs(temp, tmp.ord, panel.colors=tmp.col, gap=1, main="Numerical Variables in Economics")
+```
+
+2. Health
+```{r}
+Health_div <- grep("health__(.+)", names(TrainingData), value=TRUE)
+temp <- TrainingData %>% select(Health_div, "poverty_rate")
+names(temp)
+#spm_1
+fmla_1 <- as.formula(paste("~",paste(names(temp), collapse="+")))
+scatterplotMatrix(fmla_1, data=temp, main="Numerical Variables in Health",smoother=FALSE)
+#spm_2
+names(temp) <- c("x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11","x12")
+fmla_2 <- as.formula(paste("~",paste(names(temp), collapse="+")))
+pairs(fmla_2, data=temp, lower.panel=panel.smooth, upper.panel=panel.cor, pch=20, main="Numerical Variables in Health")
+#spm_3: cpairs()
+tmp.r <- abs(cor(temp, use="complete.obs"))
+tmp.col <- dmat.color(tmp.r)
+tmp.ord <- order.single(tmp.r)
+cpairs(temp, tmp.ord, panel.colors=tmp.col, gap=.5, main="Numerical Variables in Health")
+```
+
+3.Demographics
+```{r}
+Demographics_div <- grep("demo__(.+)", names(TrainingData), value=TRUE)
+temp <- TrainingData %>% select(Demographics_div, "poverty_rate")
+names(temp)
+#spm1
+fmla_1 <- as.formula(paste("~",paste(names(temp), collapse="+")))
+scatterplotMatrix(fmla_1, data=temp, main="Numerical Variables in Demographics",smoother=FALSE)
+#spm2
+names(temp) <- c("x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11","x12","x13","x14","x15")
+fmla_2 <- as.formula(paste("~",paste(names(temp), collapse="+")))
+pairs(fmla_2, data=temp, lower.panel=panel.smooth, upper.panel=panel.cor, pch=20, main="Numerical Variables in Demographics")
+#spm3
+tmp.r <- abs(cor(temp, use="complete.obs"))
+tmp.col <- dmat.color(tmp.r)
+tmp.ord <- order.single(tmp.r)
+cpairs(temp, tmp.ord, panel.colors=tmp.col, gap=.5, main="Numerical Variables in Demographics")
+```
+
+
+For the question in Challenge 1 on edx:
+```{r}
+summary(TL$poverty_rate)
+sd(TL$poverty_rate)
+hist(TL$poverty_rate);box()
+
+TrainingData %>% group_by(econ__economic_typology) %>% summarize(med = median(poverty_rate))
+TrainingData %>% group_by(area__urban_influence) %>% summarize(med = median(poverty_rate)) %>% filter(med == min(med))
+
+#cor(TrainingData$health__pct_adult_smoking, TrainingData$poverty_rate, use="complete.obs")
+cor(TrainingData[c("health__pct_adult_smoking","health__pct_excessive_drinking","health__pct_diabetes","health__pct_adult_obesity")], TrainingData$poverty_rate, use="pairwise.complete.obs")
+
+#TrainingData$MetrorNot <- gsub("\\s-\\s(.+)","",as.character(TrainingData$area__rucc))
+TrainingData$MetrorNot <- gsub("\\s-\\s(.+)","",TrainingData$area__rucc)
+str(TrainingData$MetrorNot)
+TrainingData %>% group_by(as.factor(MetrorNot)) %>% summarize(med = median(poverty_rate), variance = var(poverty_rate))
+
+#(med <- median(TrainingData$demo__pct_aged_65_years_and_older, na.rm=TRUE))
+summary(TrainingData$demo__pct_aged_65_years_and_older)
+TrainingData %>% filter(!is.na(demo__pct_aged_65_years_and_older)) %>% mutate(ElderlyorNot = as.factor(ifelse(demo__pct_aged_65_years_and_older > median(demo__pct_aged_65_years_and_older), "Elderly", "Non-elderly"))) %>% group_by(MetrorNot, ElderlyorNot) %>% summarize(median(poverty_rate))
+TrainingData %>% filter(!is.na(demo__pct_aged_65_years_and_older)) %>% mutate(ElderlyorNot = as.factor(ifelse(demo__pct_aged_65_years_and_older > 0.167, "Elderly", "Non-elderly"))) %>% group_by(MetrorNot, ElderlyorNot) %>% summarize(median(poverty_rate))
+```
+
+##Missing Data
+From the summary in the begining, we see there are some NAs among numerical features.(Thankfully , none among categorical features, after all, doing imputation on categorical features poses a great risk on biasing the data.) Let's study the missing pattern for a while.
+```{r}
+pct_missing <- function(x){
+  sum(is.na(x))/length(x)*100
+}
+dim(AllValues)
+
+#how many columns containing NAs?
+print(paste("The percentage of missing data in each of those", dim(AllValues[,apply(AllValues, 2, pct_missing)!=0])[2], "columns containing NAs:", sep=" "))
+(temp <- apply(AllValues[,apply(AllValues, 2, pct_missing)!=0],2,pct_missing))
+ggplot(data.frame(temp), aes(x=temp)) + geom_histogram(binwidth=2) + xlab("pct_missing in columns w/ NAs") + geom_vline(aes(xintercept=10), col="red")
+
+#how many rows containing NAs?
+print(paste("The percentage of missing data in each of those", dim(AllValues[apply(AllValues, 1, pct_missing)!=0,])[1], "rows containing NAs is ploted in the following histogram", sep=" "))
+temp <- apply(AllValues[apply(AllValues, 1, pct_missing)!=0,],1,pct_missing)
+ggplot(data.frame(temp), aes(x=temp)) + geom_histogram(binwidth=2) + xlab("pct_missing in rows w/ NAs") + geom_vline(aes(xintercept=10), col="red")
+
+#library(mice)
+#md.pattern(temp)
+```
+
+I preset the threshold of 10% for imputation, that is, features or observations missing data more than 10% would be discarded instead of imputation. 
+```{r}
+#Discard rows (only in TV)
+dim(TV)
+temp <- TV[apply(TV, 1, pct_missing)<=10,]
+dim(temp)
+#Discard columns (not only in TV)
+temp <- rbind(temp, TestValues)
+dim(temp)
+temp <- temp[,apply(temp, 2, pct_missing)<=10]
+dim(temp)
+```
+
+#Imputation
+1. kNN
+```{r}
+library(DMwR)
+knnOutput <- knnImputation(temp)
+anyNA(knnOutput)
+```
+
+2. rpart (not in production stage, so refresh your temp(df), after you're done with this block of code)
+```{r}
+library(rpart)
+anova_mod <- rpart(health__pop_per_dentist~.-health__pop_per_dentist, data=temp[!is.na(temp$health__pop_per_dentist),], method="anova", na.action=na.omit )
+health__pop_per_dentist_pred <- predict(anova_mod, newdata=temp[is.na(temp$health__pop_per_dentist),])
+var(temp[!is.na(temp$health__pop_per_dentist),]$health__pop_per_dentist)
+temp[is.na(temp$health__pop_per_dentist),]$health__pop_per_dentist <- health__pop_per_dentist_pred
+anyNA(temp$health__pop_per_dentist)
+var(temp$health__pop_per_dentist)
+```
+
+3. mice
+```{r}
+library(mice)
+mice_mod <- mice(temp, method="rf", m=5)
+miceOutput <- complete(mice_mod)
+anyNA(miceOutput)
+```
+
+##Modeling
+1. Try linear regression:
+```{r}
+temp <- knnOutput#depends on which imputation method
+temp_te <- temp[temp$row_id %in% TestValues$row_id,]
+temp_tr <- temp[!temp$row_id %in% TestValues$row_id,]
+#dim(temp_tr)
+temp_tr <- merge(temp_tr, TL, by="row_id")
+#dim(temp_tr)
+#fmla <- as.formula(paste("poverty_rate","~",paste(names(temp),collapse="+")))
+full.mod <- lm(poverty_rate~., data=temp_tr)
+null.mod <- lm(poverty_rate~1, data=temp_tr)
+step.mod <- step(null.mod, scope=list(upper=full.mod, lower=null.mod), direction="both", data=temp_tr, trace=0, steps=500)
+glance(step.mod)
+length(unlist(step.mod[[1]]))
+```
+Divide those features into 4 chunks: area, econ, health, demo, and apply stepwise selection seperately:
+```{r}
+temp_tr_area <- temp_tr %>% select(grep("area__(.+)", names(temp_tr), value=TRUE), "poverty_rate")
+temp_tr_econ <- temp_tr %>% select(grep("econ__(.+)", names(temp_tr), value=TRUE), "poverty_rate")
+temp_tr_health <- temp_tr %>% select(grep("health__(.+)", names(temp_tr), value=TRUE), "poverty_rate")
+temp_tr_demo <- temp_tr %>% select(grep("demo__(.+)", names(temp_tr), value=TRUE), "poverty_rate")
+temp_tr_list <- list(temp_tr_area, temp_tr_econ, temp_tr_health, temp_tr_demo)
+
+StepModDiv <- function(df){
+  null.mod <- lm(poverty_rate~1, data=df)
+  full.mod <- lm(poverty_rate~., data=df)
+  step(null.mod, scope=list(upper=full.mod, lower=null.mod), direction="both", data=df, trace=0, steps=500)
+}
+features <- c()
+for (df in temp_tr_list) {
+  step.mod <- StepModDiv(df)
+  xxx <- names(unlist(step.mod[[1]]))
+  xxx <- xxx[!xxx %in% "(Intercept)"]
+  features <- c(features, xxx)
+}
+length(c(features, "(Intercept)"))
+
+#grep("area__(.+)",features, value=TRUE)
+#grep("econ__(.+)",features, value=TRUE)
+#grep("health__(.+)",features, value=TRUE)
+#grep("demo__(.+)",features, value=TRUE)
+fmla <- as.formula(paste("poverty_rate","~","area__urban_influence+","econ__economic_typology+",paste(grep("health__(.+)",features,value=TRUE), collapse="+"),"+",paste(grep("demo__(.+)",features, value=TRUE), collapse="+"),"+",paste(grep("econ__pct(.+)", features, value=TRUE), collapse="+")))
+
+pool.mod <- lm(fmla,data=temp_tr)
+#pool.mod <- step(pool.mod, trace=0, steps=500)
+summary(pool.mod)
+```
+
+To make sure it's not over-fitting, I'd like to use cross validation to check that.
+```{r}
+library(vtreat)
+set.seed(2018)
+N <- 5 #how many splits?
+SplitPlan <- kWayCrossValidation(nrow(temp_tr), N, NULL, NULL)
+#cv.RMSE.train <- c()
+#cv.RMSE.test <- c()
+for(i in 1:N) {
+  split <- SplitPlan[[i]]
+  cv.pool.mod <- lm(fmla, data=temp_tr[split$train,])
+  cv.RMSE.train[i] <- sqrt(mean(augment(cv.pool.mod)$.resid^2))
+  cv.RMSE.test[i] <- sqrt(mean((augment(cv.pool.mod, newdata=temp_tr[split$app,])$.fitted-temp_tr[split$app,]$poverty_rate)^2))
+}
+cv.RMSE.train
+cv.RMSE.test
+mean(cv.RMSE.test)
+```
+
+Predict and submit!
+```{r}
+temp_te$poverty_rate <- predict(step.mod, newdata=temp_te)
+write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180109)sbmsn_lm_1.csv", row.names=FALSE) 
+
+temp_te$poverty_rate <- predict(pool.mod, newdata=temp_te)
+write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180109)sbmsn_lm_2.csv", row.names=FALSE) 
+```
+
+2. Try tree based regression:
+2-1)xgboost
+```{r}
+temp <- knnOutput#depends on which imputation method
+temp_te <- temp[temp$row_id %in% TestValues$row_id,]
+temp_tr <- temp[!temp$row_id %in% TestValues$row_id,]
+temp_tr <- merge(temp_tr, TL, by="row_id")
+
+#fancy version of one-hot-encoding using designTreatmentsZ()
+library(vtreat)
+#(vars <- colnames(temp_tr)[2:4])
+vars <- colnames(temp_tr[colnames(temp_tr)!="poverty_rate"])
+treatplan <- designTreatmentsZ(temp_tr, vars, verbose=FALSE)
+#str(treatplan)
+newvars <- treatplan$scoreFrame %>% select(varName, origName, code) %>% filter(code %in% c("clean","lev")) %>% use_series(varName)
+temp_tr.treat <- prepare(treatplan, temp_tr, varRestriction = newvars)
+temp_te.treat <- prepare(treatplan, temp_te, varRestriction = newvars)
+
+#xgboost
+library(xgboost)
+cv <- xgb.cv(data=as.matrix(temp_tr.treat), label=temp_tr$poverty_rate, nrounds=300, nfold=5, objective="reg:linear", eta=0.2, max_depth=6, early_stopping_rounds=30, verbose=FALSE)
+(cv_result <- cv %>% use_series(evaluation_log) %>% summarize(ntrees.train=which.min(train_rmse_mean), ntrees.test=which.min(test_rmse_mean)))
+xgb.mod <- xgboost(data=as.matrix(temp_tr.treat), label=temp_tr$poverty_rate, nrounds=cv_result$ntrees.test, objective="reg:linear", eta=0.2, depth=6, verbose=FALSE)
+```
+
+Predict and submit!
+```{r}
+temp_te$poverty_rate <- predict(xgb.mod, newdata=as.matrix(temp_te.treat))
+write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180110)sbmsn_xgb_1.csv", row.names=FALSE)
+```
+xgboost with grid search and cross-validation to determine hyperparameter.
+```{r, include=FALSE}
+#xgboost w/ grid search
+set.seed(2018)
+library(xgboost)
+d.seq <- seq(from=2, to=8, by=2)
+e.seq <- c(0.001, 0.005, 0.01, 0.05, 0.1)
+#grid_result <- data.frame(DEPTH=rep(0,40), ETA=rep(0,40), RMSE=rep(0,40), NTREE=rep(0,40))
+DEPTH <- c()
+ETA <- c()
+RMSE <-c()
+NTREE <- c()
+for(i in 1:length(d.seq)){
+  for(j in 1:length(e.seq)){
+    cv <- xgb.cv(data=as.matrix(temp_tr.treat), label=temp_tr$poverty_rate, nrounds=5000, nfold=5, objective="reg:linear", eta=e.seq[j], max_depth=d.seq[i], early_stopping_rounds=100, verbose=FALSE)
+    DEPTH <- c(DEPTH, d.seq[i])
+    ETA <- c(ETA, e.seq[j])
+    RMSE <- c(RMSE, min(cv$evaluation_log$test_rmse_mean))
+    NTREE <- c(NTREE, which.min(cv$evaluation_log$test_rmse_mean))
+  }
+}
+
+xgb.mod <- xgboost(data=as.matrix(temp_tr.treat), label=temp_tr$poverty_rate, nrounds=NTREE[which.min(RMSE)], objective="reg:linear", eta=ETA[which.min(RMSE)], depth=DEPTH[which.min(RMSE)], verbose=FALSE)
+
+temp_te$poverty_rate <- predict(xgb.mod, newdata=as.matrix(temp_te.treat))
+write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180125)sbmsn_xgb_2.csv", row.names=FALSE)
+```
+
+2-2)random forest
+```{r}
+library(ranger)
+rf.mod <- ranger(fmla, data=temp_tr, num.trees=500, mtry=6, respect.unordered.factors="order", seed=set.seed(2018))
+```
+Predict and submit!
+```{r}
+#temp_te$poverty_rate <- predict(rf.mod, newdata=temp_te)$prediction #newdata caused error
+temp_te$poverty_rate <- predict(rf.mod, data=temp_te)$prediction
+write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180110)sbmsn_ranger_1.csv", row.names=FALSE)
+```
+
+##Feature Extraction:
+1. PCA
+```{r}
+temp <- knnOutput#depends on which imputation method
+
+#library(missMDA)
+#temp <- imputePCA(TV[!colnames(TV) %in% c("row_id", "area__rucc", "area__urban_influence", "econ__economic_typology", "yr")])
+#library(FactoMineR)
+#result <- PCA(temp)
+
+#simple version of one-hot-encoding using dummy.data.frame()
+library(dummies)
+temp <- dummy.data.frame(temp, names=c("area__rucc", "area__urban_influence", "econ__economic_typology", "yr"))
+temp_te <- temp[temp$row_id %in% TestValues$row_id,]
+temp_tr <- temp[!temp$row_id %in% TestValues$row_id,]
+temp_tr <- merge(temp_tr, TL, by="row_id")
+
+PCA.result_tr <- prcomp(temp_tr[!colnames(temp_tr) %in% c("row_id", "poverty_rate")], scale.=TRUE)
+
+biplot(PCA.result_tr, scale=0)
+order(PCA.result_tr$rotation["PC1"], decreasing=TRUE)
+
+str(PCA.result)
+prop_var <- PCA.result_tr$sdev^2/sum(PCA.result_tr$sdev^2)
+thr <- min(which(cumsum(prop_var)>=0.95))
+
+PCA.result_te <- predict(PCA.result_tr, newdata=temp_te[colnames(temp_te)!="row_id"])
+
+PCA.result_tr <- data.frame(poverty_rate=temp_tr$poverty_rate, PCA.result_tr$x)
+#PCA.result_te <- data.frame(PCA.result_te$x)#Error
+PCA.result_te <- data.frame(PCA.result_te)
+
+#library(ranger)
+#pca.rf.mod <- ranger(poverty_rate~., data=PCA.result_tr[,1:(thr+1)], num.trees=200, mtry=6, respect.unordered.factors="order", seed=set.seed(2018))
+
+#temp_te$poverty_rate <- predict(pca.rf.mod, data=PCA.result_te[,1:thr])$prediction
+#write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180112)sbmsn_ranger_2.csv", row.names=FALSE)
+
+library(xgboost)
+cv <- xgb.cv(data=as.matrix(PCA.result_tr[,1:(thr+1)]), label=temp_tr$poverty_rate, nrounds=300, nfold=5, objective="reg:linear", eta=0.1, max_depth=6, early_stopping_rounds=30, verbose=FALSE)
+(cv_result <- cv %>% use_series(evaluation_log) %>% summarize(ntrees.train=which.min(train_rmse_mean), ntrees.test=which.min(test_rmse_mean)))
+pca.xgb.mod <- xgboost(data=as.matrix(PCA.result_tr[,1:(thr+1)]), label=temp_tr$poverty_rate, nrounds=cv_result$ntrees.test, objective="reg:linear", eta=0.1, depth=6, verbose=FALSE)
+
+temp_te$poverty_rate <- predict(pca.xgb.mod, newdata=as.matrix(PCA.result_te[,1:thr]))
+write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180113)sbmsn_xgb_2.csv", row.names=FALSE)
+```
+
+
+
+
+
+2. Factor
+
+Reference:
+https://github.com/StatsWithR/statsr/blob/master/R/rep_sample_n.R (rep_sample_n())
+http://www.gettinggeneticsdone.com/2011/07/scatterplot-matrices-in-r.html (panel.cor())
+
