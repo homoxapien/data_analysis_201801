@@ -71,15 +71,15 @@ kable(temp %>% group_by(econ__economic_typology) %>% summarize(count=n(), prop=r
 kable(temp %>% group_by(yr) %>% summarize(count=n(), prop=round(n()/dim(temp)[1],3)))
 
 #for Numerical Variables:
-#summary(TrainingData[!colnames(TrainingData) %in% c("row_id", "poverty_rate", "area__rucc", "area__urban_influence", "econ__economic_typology", "yr")])#messy
 temp <- TrainingData[!colnames(TrainingData) %in% c("row_id", "area__rucc", "area__urban_influence", "econ__economic_typology", "yr")]
+#summary(temp)#messy
 temp <- data.frame(min=round(apply(temp,2,min,na.rm=TRUE),3), median=round(apply(temp,2,median,na.rm=TRUE),3), mean=round(apply(temp,2,mean,na.rm=TRUE),3), max=round(apply(temp,2,max,na.rm=TRUE),3), sd=round(apply(temp,2,sd,na.rm=TRUE),3))
 kable(temp)
 
 ```
 
 ###i. Response Variable: "poverty_rate"
-Let's look at the descriptive statistics of the response variable. Notice the median is below the mean for about 1 percent, which might indicate that there are some counties with poverty rate unusually high. The distribution of poverty rate more ecplicitly shows the right skewness.
+Let's look at the descriptive statistics of the response variable. Notice the median is below the mean for about 1 percent, which might indicate that there are some counties with poverty rate unusually high. The distribution of poverty rate more explicitly shows the right-skewness.
 ```{r, echo=FALSE}
 #summary of poverty_rate
 summary(TL$poverty_rate)
@@ -121,17 +121,17 @@ TrainingData <- merge(TV, TL, by="row_id")
 table(TrainingData$area__ubif_sim)
 ```
 So basicly, 
-- Metropolitan_L : Large-in a metro area with at least 1 million residents or more;
-- Metropolitan_S : Small-in a metro area with fewer than 1 million residents;
-- Micropolitan_L : Micropolitan adjacent to a large metro area;
-- Micropolitan_S : Micropolitan adjacent to a small metro area;
-- Micropolitan_X : Micropolitan not adjacent to a metro area;
-- Noncore_L      : Noncore adjacent to a large metro area;
-- Noncore_S1     : Noncore adjacent to a small metro with town of at least 2,500 residents;
-- Noncore_S2     : Noncore adjacent to a small metro and does not contain a town of at least 2,500 residents;
-- Noncore_W1     : Noncore adjacent to micro area and contains a town of 2,500-19,999 residents;
-- Noncore_W2     : Noncore adjacent to micro area and does not contain a town of at least 2,500 residents;
-- Noncore_X1     : Noncore not adjacent to a metro/micro area and contains a town of 2,500  or more residents;
+- Metropolitan_L : Large-in a metro area with at least 1 million residents or more
+- Metropolitan_S : Small-in a metro area with fewer than 1 million residents
+- Micropolitan_L : Micropolitan adjacent to a large metro area
+- Micropolitan_S : Micropolitan adjacent to a small metro area
+- Micropolitan_X : Micropolitan not adjacent to a metro area
+- Noncore_L      : Noncore adjacent to a large metro area
+- Noncore_S1     : Noncore adjacent to a small metro with town of at least 2,500 residents
+- Noncore_S2     : Noncore adjacent to a small metro and does not contain a town of at least 2,500 residents
+- Noncore_W1     : Noncore adjacent to micro area and contains a town of 2,500-19,999 residents
+- Noncore_W2     : Noncore adjacent to micro area and does not contain a town of at least 2,500 residents
+- Noncore_X1     : Noncore not adjacent to a metro/micro area and contains a town of 2,500  or more residents
 - Noncore_X2     : Noncore not adjacent to a metro/micro area and does not contain a town of at least 2,500 residents.
 
 (3) Make a contingency table of "area__rucc_sim" and "area__ubif_sim" to see if they somewhat related, 
@@ -158,20 +158,20 @@ From the proportion table or equivalently stacked barchart, for metro area, "are
 
 (4) An obvious difference between area__rucc and area_urban_influence is the notion, Micropolitan. However, is micropolitan really important?
 ```{r, echo=FALSE}
-temp <- TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% group_by(MmN) %>% summarize(n(), median(poverty_rate), mean(poverty_rate))
+temp <- TrainingData %>% mutate(type = factor(gsub("_(.+)", "", area__ubif_sim))) %>% group_by(type) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3))
 
 library(knitr)
 kable(temp)
 
-#par(mfrow=c(2,1))
+#par(mfrow=c(2,1))#don't work with ggplot
 #TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% group_by(MmN) %>% ggplot(aes(x=MmN, y=poverty_rate)) + geom_boxplot() + coord_flip()
 
-TrainingData %>% mutate(MmN = factor(gsub("_(.+)", "", area__ubif_sim))) %>% filter(MmN != "Metropolitan") %>% ggplot(aes(x=poverty_rate, fill=MmN)) + geom_density(bw=3, alpha=0.5)
+TrainingData %>% mutate(type = factor(gsub("_(.+)", "", area__ubif_sim))) %>% filter(type != "Metropolitan") %>% ggplot(aes(x=poverty_rate, fill=type)) + geom_density(bw=3, alpha=0.5)
 ```
 
 The distribution of poverty rate among micropolitan is somehow similar to that among non-metro. (From the training data, even though the median poverty rate of micropolitan is higher than that of non-metro, but due to outliers, the mean poverty rate of non-metro is higher than that of micropolitan.)
 
-Hypothesis test: Does micropolitan have different poverty rate from non-metro? Here I carry out the hypothesis test by permutation of "poverty_rate" between micropolitan and non-metro for multiple times. The result is a simulation of the distribution of difference of "poverty_rate" between these two groups. And to save space, I just show the output graph without source code.
+Hypothesis test: Does micropolitan have different poverty rate from non-metro? Here I carry out the hypothesis test by permutation of "poverty_rate" between micropolitan and non-metro for 10000 times. The result, shown below, is a simulation of the distribution of difference of "poverty_rate" between these two groups.
 ```{r, echo=FALSE}
 #library(statr)
 rep_sample_n <- function(tbl, size, replace = FALSE, reps = 1){
@@ -188,21 +188,29 @@ mN_perm <- mN %>% rep_sample_n(size=nrow(mN), reps=10000) %>% mutate(poverty_rat
 mN_perm %>% ggplot(aes(x=diff_perm)) + geom_histogram(binwidth=0.05) + geom_vline(aes(xintercept=diff_orig),col="red") + geom_vline(aes(xintercept=quantile(diff_perm, p=0.025)),col="blue") + geom_vline(aes(xintercept=quantile(diff_perm, p=0.975)),col="blue")
 
 ```
-The blue lines indicate the 2.5% and 97.5% quantile respectively. As in the graph above, the red line lies within the 95% zone, which means no significant evidence that micropolitan is different from non-metro.So to reduce dimension, I would first consider classifying counties as metro or non-metro in the modeling process later on, instead of metropolitan, micropolitan and noncore. But there other factors hidden in area__rucc and area__urban_influence, namely population and adjacency.
+The distribution of the difference looks like a bell-shaped curve, centered at zero. The blue vertical lines indicate the 2.5% and 97.5% quantile respectively. As in the graph above, the red vertical line lies within the 95% zone, which means no significant evidence that micropolitan is different from non-metro.So to reduce dimension, I would first consider classifying counties as metro or non-metro in the modeling process later on, instead of metropolitan, micropolitan and noncore. But there are still other factors hidden in area__rucc and area__urban_influence, namely population and adjacency.
 
 ####Population
-(5) Does population make any difference in poverty rate among metropolitan counties? If so, is it necessary to divide "Metropolitan_S"(in area__ubif_sim) into "Metro_2" and "Metro_3"(in area__rucc_sim)?
+(5) Let's look at metropolitan counties first. Does population make any difference in poverty rate among metropolitan counties? If so, is it necessary to divide "Metropolitan_S"(in area__ubif_sim) into "Metro_2" and "Metro_3"(in area__rucc_sim)?
 ```{r, echo=FALSE}
-#TrainingData %>% filter(area__ubif_sim %in% c("Metropolitan_L", "Metropolitan_S")) %>% group_by(area__ubif_sim) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), min(poverty_rate))
+#for metropolitan from area__urbif_sim classification
 
-#TrainingData %>% filter(area__ubif_sim %in% c("Metropolitan_L", "Metropolitan_S")) %>% ggplot(aes(x=poverty_rate, fill=area__ubif_sim)) + geom_density(bw=2, alpha=0.5)
+temp <-TrainingData %>% filter(area__ubif_sim %in% c("Metropolitan_L", "Metropolitan_S")) %>% group_by(area__ubif_sim) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3))
 
-TrainingData %>% filter(area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% group_by(area__rucc_sim) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), min(poverty_rate))
+kable(temp)
+
+TrainingData %>% filter(area__ubif_sim %in% c("Metropolitan_L", "Metropolitan_S")) %>% ggplot(aes(x=poverty_rate, fill=area__ubif_sim)) + geom_density(bw=2, alpha=0.5)
+
+#for metropolitan from area__rucc_sim classification
+
+temp <- TrainingData %>% filter(area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% group_by(area__rucc_sim) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3))
+
+kable(temp)
 
 TrainingData %>% filter(area__rucc_sim %in% c("Metro_1", "Metro_2", "Metro_3")) %>% ggplot(aes(x=poverty_rate, fill=area__rucc_sim)) + geom_density(bw=2, alpha=0.5)
 ```
 
-To answer the second question regarding population of metro area, let's do another hypothesis test. Again to save space, I just show the output graph without source code.
+To answer the second question regarding population of metro area, let's do another hypothesis test by using permutation. The result is shown below.
 ```{r, echo=FALSE}
 M2M3 <- TrainingData %>% 
   filter(area__rucc_sim %in% c("Metro_2", "Metro_3")) %>%
@@ -221,7 +229,7 @@ M2M3_perm %>%
     geom_vline(aes(xintercept=quantile(diff_perm, p=0.025)),col="blue") +
     geom_vline(aes(xintercept=quantile(diff_perm, p=0.975)),col="blue")
 ```
-The blue lines indicate the 2.5% and 97.5% quantile respectively. And clearly, this time, the red line lies outside of the 95% zone, which means a less than 5% p-value.So I'd better follow the 3-category classification from area__rucc, instead of the 2-category classification from area_urban_influence, for metropolitan counties.
+As the previous one, the distribution looks like a bell-shaped curve, centered at zero. The blue vertical lines indicate the 2.5% and 97.5% quantile respectively. But this time, clearly, the red line lies outside of the 95% zone, which means a less than 5% p-value.So I'd better follow the 3-category classification from area__rucc, instead of the 2-category classification from area_urban_influence, for metropolitan counties.
 
 (6) Does population make any difference in poverty rate among non-metro counties?
 ```{r, echo=FALSE}
@@ -231,14 +239,15 @@ temp <- TrainingData %>%
   select("pop_size", "poverty_rate")
 
 temp %>% 
-  group_by(pop_size) %>% 
-  summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate)) 
-
-#temp %>% 
-#  ggplot(aes(x=pop_size, y=poverty_rate)) + geom_boxplot() + coord_flip()
+  ggplot(aes(x=pop_size, y=poverty_rate)) + geom_boxplot() + coord_flip()
 
 temp %>% 
   ggplot(aes(x=poverty_rate, fill=pop_size)) + geom_density(bw=2, alpha=0.5)
+
+temp <- temp %>% group_by(pop_size) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3))
+
+kable(temp)
+
 ```
 It seems hard to decide this time, so I'd like to apply ANOVA followed by pairwise-comparison using Tukey Honest Significance Difference with TukeyHSD(). But beforehand, since ANOVA is under the assumption of homogeneity and normality, let's check if those conditions are met:
 ```{r, echo=FALSE}
@@ -258,37 +267,47 @@ kruskal.test(poverty_rate~pop_size, data=temp)
 pairwise.t.test(temp$poverty_rate, temp$pop_size, p.adjusted.method = "BH", pool.sd=FALSE)
 ```
 
-From the result above, there is an option combining "L" and "M" into one category to decrease the dimension.
+From the result above, population is making a difference in poverty rate, and mainly between "M" and "S". So there is an option combining "L" and "M" into one category to decrease the dimension. 
 
 ####Adjacency
 (7) Does adjacency make any difference? Since population is yet viewed as a key player in predicting poverty rate, the following discussion about adjacency will base on the condition of population size.
 ```{r, echo=FALSE}
 #Adjacency w/o considering population size
 temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_1","Nonmetro_2","Nonmetro_3","Nonmetro_4")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_1","Nonmetro_3"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
-temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+
+kable(temp %>% group_by(Adjacency) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3)))
+
 temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
 
 #Adjacency in population size L
-temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_1","Nonmetro_2")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_1"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
-temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
-temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_1","Nonmetro_2")) %>% mutate(Adjacency_L = factor(ifelse(area__rucc_sim %in% c("Nonmetro_1"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency_L", "poverty_rate") 
+
+kable(temp %>% group_by(Adjacency_L) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3)))
+
+temp %>% ggplot(aes(x=Adjacency_L, y=poverty_rate)) + geom_boxplot() + coord_flip()
 
 #Adjacency in population size M
-temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_3","Nonmetro_4")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_3"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
-temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
-temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_3","Nonmetro_4")) %>% mutate(Adjacency_M = factor(ifelse(area__rucc_sim %in% c("Nonmetro_3"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency_M", "poverty_rate") 
+
+kable(temp %>% group_by(Adjacency_M) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3)))
+
+temp %>% ggplot(aes(x=Adjacency_M, y=poverty_rate)) + geom_boxplot() + coord_flip()
 
 #Adjacency in population size S
-temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_5","Nonmetro_6")) %>% mutate(Adjacency = factor(ifelse(area__rucc_sim %in% c("Nonmetro_5"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency", "poverty_rate") 
-temp %>% group_by(Adjacency) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
-temp %>% ggplot(aes(x=Adjacency, y=poverty_rate)) + geom_boxplot() + coord_flip()
+
+temp <- TrainingData %>% filter( area__rucc_sim %in% c("Nonmetro_5","Nonmetro_6")) %>% mutate(Adjacency_S = factor(ifelse(area__rucc_sim %in% c("Nonmetro_5"), "Y", "N"))) %>% select("area__rucc_sim","Adjacency_S", "poverty_rate") 
+
+kable(temp %>% group_by(Adjacency_S) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3)))
+
+temp %>% ggplot(aes(x=Adjacency_S, y=poverty_rate)) + geom_boxplot() + coord_flip()
 ```
-To save some space, let me briefly describe what one can see here. Adjacency has the strongest effect in non-metro county of small population size, but for those of population size medium and large, the effect is not so obvious.
+Adjacency has the strongest effect in non-metro county of small population size, but for those of population size medium and large, the effect is not so obvious. What's counter intuitive is that among non-metro county, those adjacent to metro area tend to have higher poverty rate than those aren't. And this tendency grows as population size decreases.
 
 (8)A brief look at "econ__economic_typology", then simplify and reorder it.
 ```{r, echo=FALSE}
 #descriptive statistics
-TrainingData %>% group_by(econ__economic_typology) %>% summarize(n(), median(poverty_rate), mean(poverty_rate), var(poverty_rate))
+kable(TrainingData %>% group_by(econ__economic_typology) %>% summarize(count=n(), median=round(median(poverty_rate),3), mean=round(mean(poverty_rate),3), var=round(var(poverty_rate),3)))
 
 #boxplot
 TrainingData %>% select("econ__economic_typology", "poverty_rate") %>% ggplot(aes(y=poverty_rate, x=econ__economic_typology)) + geom_boxplot() + coord_flip()
@@ -463,8 +482,6 @@ pct_missing <- function(x){
   sum(is.na(x))/length(x)*100
 }
 
-#par(mfrow=c(1,2))
-
 #how many columns containing NAs?
 temp <- apply(AllValues[,apply(AllValues, 2, pct_missing)!=0],2,pct_missing)
 ggplot(data.frame(temp), aes(x=temp)) + geom_histogram(binwidth=2) + xlab("missing percentage in columns w/ NAs") + geom_vline(aes(xintercept=10), col="red")
@@ -482,13 +499,13 @@ temp <- rbind(temp, TestValues)
 temp <- temp[,apply(temp, 2, pct_missing)<=10]
 
 #Given the threshold 10%, how much data are discarded?
-dim(AllValues)
-dim(temp)
+#dim(AllValues)
+#dim(temp)
 
 #knn imputation
 library(DMwR)
 knnOutput <- knnImputation(temp)
-anyNA(knnOutput)
+#anyNA(knnOutput)
 ```
 
 ##Prediction: Linear Regression
@@ -518,6 +535,7 @@ set.seed(2018)
 cv.RMSE.test <- sqrt(cv.glm(temp_tr, full.mod, K=5)$delta)
 #May have too many variables that exceeds the limit of cv.glm() or result from linear dependency between some variables
 
+plot(full.mod)
 ```
 Full model is doing ok, with RMSE= `r cv.RMSE.test`. But from the console, there is a warning of linear dependency among variables, which may affect our prediction.
 
@@ -763,12 +781,13 @@ xgb.mod <- xgboost(data=as.matrix(temp_tr.treat), label=temp_tr$poverty_rate, nr
 #predict and submit
 temp_te$poverty_rate <- predict(xgb.mod, newdata=as.matrix(temp_te.treat))
 write.csv(temp_te[c("row_id","poverty_rate")], file="sbmsn/(20180123)sbmsn_xgb_1.csv", row.names=FALSE)
+
 ```
 
 The code chunk for grid search of gradient boosted tree is obmitted here, for it takes forever to knit... To find the code chunk, go to Data_Exploration.Rmd
 
 ##Conclusion
-In this analysis, I find that population and adjacency to big city are factors in the area division that yield information about poverty rate. I also find that education and ethnicity are somewhat related to poverty rate. As for prediction, non-linear models (gradient boosted tree) tend to give better accuracy than linear ones, but not as good for interpretation.
+In this analysis, I find that population and adjacency to metro area are factors in the area division that yield information about poverty rate. I also find that education and ethnicity are somewhat related to poverty rate. As for prediction, non-linear models (gradient boosted tree) tend to give better accuracy than linear ones, but not as good for interpretation.
 
 ##Reference:
 1. http://github.com/StatsWithR/statsr/blob/master/R/rep_sample_n.R (rep_sample_n())
