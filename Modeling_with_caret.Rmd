@@ -1,0 +1,85 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+Now, import the library
+```{r}
+#load in libraries needed
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(stats)
+library(ggplot2)
+library(broom)
+library(car)
+library(knitr)
+library(caret)
+library(RANN)
+```
+Then Import the data
+```{r}
+#load in the data
+TV <- read.csv("data/Training_values.csv")
+TL <- read.csv("data/Training_labels.csv")
+TestValues <- read.csv("data/Test_values.csv")
+
+#data preparation
+TrainingData <- merge(TV, TL, by="row_id")#used in the stage of exploration
+AllValues <- rbind(TV, TestValues)#used in the stage of prediction
+```
+Train a linear model, model0
+```{r}
+model0 <- train(x=TV, y=TL$poverty_rate, method="lm", trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
+
+model0
+```
+
+Train a linear model, model1, w/ medianImpute
+```{r}
+model1 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess="medianImpute", trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
+
+model1
+```
+Seems like NA is causing the error previouly.
+
+Train a linear model, model2, w/ knnImpute
+```{r}
+model2 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess="knnImpute", trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
+
+model2
+```
+Better RMSE from knnImpute. And notice that "center" and "scale" are carried out automatically after knnImpute.
+
+Train a linear model, model3, w/ knnImpute and pca
+```{r}
+model3 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess=c("knnImpute","pca"), trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
+
+model3
+```
+Not satisfactory result. Notice that again, "center" and "scale" are carried out automatically, but should be in between knnImpute and pca.
+
+Train a linear model, model4, same as model3 but specifies order of preProcess.
+```{r}
+model4 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess=c("knnImpute","center","scale","pca"), trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
+
+model4
+```
+slightly better than model3, but clearly no improvement in performance with pca. Once again, high variance variables don't gaurantee better prediction!
+
+
+
