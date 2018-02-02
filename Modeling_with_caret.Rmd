@@ -81,5 +81,78 @@ model4
 ```
 slightly better than model3, but clearly no improvement in performance with pca. Once again, high variance variables don't gaurantee better prediction!
 
+There is flaw in early discussion that not a single cross validation plan is being made to the base of comparison. (i.e. I might have the result by chance.)
+```{r}
+set.seed(2018)
 
+#Create custom indeces
+myFolds <- createFolds(TL$poverty_rate, k=5)
+
+#Then define a reusable trainControl object
+myControl <- trainControl(method="cv", verboseIter=TRUE, savePredictions=TRUE, index=myFolds)
+```
+
+Now, let's try glmnet algorithm
+```{r}
+model_1 <- train(x=TV, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="knnImpute", trControl=myControl)
+
+plot(model_1)
+```
+some say it's because categorical variables are not yet factor...
+```{r}
+#remove id
+temp <- TV[,-1]
+#make them factors
+temp$area__rucc <- as.factor(temp$area__rucc)
+temp$area__urban_influence <- as.factor(temp$area__urban_influence)
+temp$econ__economic_typology <- as.factor(temp$econ__economic_typology)
+temp$yr <- as.factor(temp$yr)
+
+model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
+
+plot(model_1)
+```
+use model.matrix instead...
+```{r}
+temp <- data.frame(model.matrix(poverty_rate~.,TrainingData)[,-1])
+model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
+
+plot(model_1)
+```
+use fmla form of caret train...
+```{r}
+model_1 <- train(poverty_rate~., data=TrainingData, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
+
+plot(model_1)
+```
+or maybe it's becuase some columns are too heavily missing
+```{r}
+#function used for finding missing percentage of feature concerned
+pct_missing <- function(x){
+  sum(is.na(x))/length(x)*100
+}
+
+temp <- TV[apply(TV, 1, pct_missing)<=10,]
+temp <- temp[,apply(temp, 2, pct_missing)<=10]
+
+model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
+
+plot(model_1)
+
+```
+Uh...rrrrr..
+
+try randome forest
+```{r}
+model_2 <- train(x=TV, y=TL$poverty_rate, method="ranger", tuneLength=10, trControl=myControl, preProcess="medianImpute")
+
+plot(model_2)
+```
+
+try xgboost
+```{r}
+model_3 <- train(x=TV, y=TL$poverty_rate, method="xgbTree", trControl=myControl, preProcess="medianImpute")
+
+plot(model_3)
+```
 
