@@ -81,6 +81,7 @@ model4
 ```
 slightly better than model3, but clearly no improvement in performance with pca. Once again, high variance variables don't gaurantee better prediction!
 
+<<<<<<< HEAD
 There is flaw in early discussion that not a single cross validation plan is being made to the base of comparison. (i.e. I might have the result by chance.)
 ```{r}
 set.seed(2018)
@@ -155,4 +156,7 @@ model_3 <- train(x=TV, y=TL$poverty_rate, method="xgbTree", trControl=myControl,
 
 plot(model_3)
 ```
+=======
+
+>>>>>>> a90a6c311e5bc4a6d874de21e9510d4d081048c6
 
