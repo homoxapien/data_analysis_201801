@@ -141,7 +141,19 @@ model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.gri
 plot(model_1)
 
 ```
-Uh...rrrrr..
+Uh...maybe due to some zero-variance or near-zero-variance predictor...
+
+```{r}
+dim(TV)
+nzv <- nearZeroVar(TV)
+filteredTV <- TV[,-nzv]
+dim(filteredTV)
+```
+does that mean every predictor is discarded due to near zero variance?
+```{r}
+nearZeroVar(TV, saveMetrics=TRUE)
+```
+I almost made a silly mistake.
 
 try randome forest
 ```{r}
@@ -156,7 +168,4 @@ model_3 <- train(x=TV, y=TL$poverty_rate, method="xgbTree", trControl=myControl,
 
 plot(model_3)
 ```
-=======
-
->>>>>>> a90a6c311e5bc4a6d874de21e9510d4d081048c6
 
