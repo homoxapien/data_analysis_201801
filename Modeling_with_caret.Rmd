@@ -42,14 +42,16 @@ TestValues <- read.csv("data/Test_values.csv")
 TrainingData <- merge(TV, TL, by="row_id")#used in the stage of exploration
 AllValues <- rbind(TV, TestValues)#used in the stage of prediction
 ```
-Train a linear model, model0
+###Try once
+####Train a linear model, model0
 ```{r}
 model0 <- train(x=TV, y=TL$poverty_rate, method="lm", trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
 
 model0
 ```
+There are missing values to be dealt with.
 
-Train a linear model, model1, w/ medianImpute
+####Train a linear model, model1, w/ medianImpute
 ```{r}
 model1 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess="medianImpute", trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
 
@@ -57,7 +59,7 @@ model1
 ```
 Seems like NA is causing the error previouly.
 
-Train a linear model, model2, w/ knnImpute
+####Train a linear model, model2, w/ knnImpute
 ```{r}
 model2 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess="knnImpute", trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
 
@@ -65,7 +67,7 @@ model2
 ```
 Better RMSE from knnImpute. And notice that "center" and "scale" are carried out automatically after knnImpute.
 
-Train a linear model, model3, w/ knnImpute and pca
+####Train a linear model, model3, w/ knnImpute and pca
 ```{r}
 model3 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess=c("knnImpute","pca"), trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
 
@@ -73,7 +75,7 @@ model3
 ```
 Not satisfactory result. Notice that again, "center" and "scale" are carried out automatically, but should be in between knnImpute and pca.
 
-Train a linear model, model4, same as model3 but specifies order of preProcess.
+####Train a linear model, model4, same as model3 but specifies order of preProcess.
 ```{r}
 model4 <- train(x=TV, y=TL$poverty_rate, method="lm", preProcess=c("knnImpute","center","scale","pca"), trControl=trainControl(method="cv", number=5, verboseIter=TRUE))
 
@@ -81,8 +83,10 @@ model4
 ```
 slightly better than model3, but clearly no improvement in performance with pca. Once again, high variance variables don't gaurantee better prediction!
 
-<<<<<<< HEAD
+###Try twice
 There is flaw in early discussion that not a single cross validation plan is being made to the base of comparison. (i.e. I might have the result by chance.)
+####myControl
+Let's make up a single trainControl
 ```{r}
 set.seed(2018)
 
@@ -93,13 +97,15 @@ myFolds <- createFolds(TL$poverty_rate, k=5)
 myControl <- trainControl(method="cv", verboseIter=TRUE, savePredictions=TRUE, index=myFolds)
 ```
 
+####glmnet
 Now, let's try glmnet algorithm
 ```{r}
 model_1 <- train(x=TV, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="knnImpute", trControl=myControl)
 
-plot(model_1)
 ```
-some say it's because categorical variables are not yet factor...
+some say it's because categorical variables are not yet factor...Main difference between function lm and glmnet is that the former is capable of dealing with categorical variables, but the latter isn't. So let's do it for glmnet.
+
+####factorize categorial varialbes
 ```{r}
 #remove id
 temp <- TV[,-1]
@@ -110,59 +116,62 @@ temp$econ__economic_typology <- as.factor(temp$econ__economic_typology)
 temp$yr <- as.factor(temp$yr)
 
 model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
-
-plot(model_1)
 ```
-use model.matrix instead...
+Only to find out that categorical variables in TV are already factors...So a more percise solution is not factorization but dummification.
+
+####model.matrix
+use model.matrix to dummify those categorical variables.
 ```{r}
 temp <- data.frame(model.matrix(poverty_rate~.,TrainingData)[,-1])
 model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
 
-plot(model_1)
 ```
-use fmla form of caret train...
-```{r}
-model_1 <- train(poverty_rate~., data=TrainingData, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
+model.matrix automatically removed observations with NA, which leads to dimensions between temp and TL unmatched.
 
-plot(model_1)
+####dummyVars
+use dummyVars instead (also from caret)
+```{r}
+temp <- data.frame(dummyVars(poverty_rate~.,TrainingData))
+model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
 ```
-or maybe it's becuase some columns are too heavily missing
+then why not put into train without coercing?
 ```{r}
-#function used for finding missing percentage of feature concerned
-pct_missing <- function(x){
-  sum(is.na(x))/length(x)*100
-}
-
-temp <- TV[apply(TV, 1, pct_missing)<=10,]
-temp <- temp[,apply(temp, 2, pct_missing)<=10]
-
+temp <- dummyVars(poverty_rate~.,TrainingData)
 model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.001, 0.1, length=10)), preProcess="medianImpute", trControl=myControl)
 
+```
+Seems like data.frame is required, but how? I mean dummyVars is a completely bizarre object...Some say it's possible to use predict
+```{r}
+temp <- dummyVars(poverty_rate~.,TrainingData)
+temp <- data.frame(predict(temp, newdata=TrainingData))
+model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=0:1, lambda=seq(0.0001, 0.1, length=20)), preProcess="medianImpute", trControl=myControl)
+
 plot(model_1)
-
 ```
-Uh...maybe due to some zero-variance or near-zero-variance predictor...
-
+Finally.
+Lesson learned: glmnet only takes quatitative variables and make sure they are complete without missing values.
+So one can see the different performances between ridge regression(0) and lasso regression(1). Let's include a 50% ridge and 50% lasso to play a little bit.
 ```{r}
-dim(TV)
-nzv <- nearZeroVar(TV)
-filteredTV <- TV[,-nzv]
-dim(filteredTV)
-```
-does that mean every predictor is discarded due to near zero variance?
-```{r}
-nearZeroVar(TV, saveMetrics=TRUE)
-```
-I almost made a silly mistake.
+temp <- dummyVars(poverty_rate~.,TrainingData)
+temp <- data.frame(predict(temp, newdata=TrainingData))
+model_1 <- train(x=temp, y=TL$poverty_rate, method="glmnet", tuneGrid=expand.grid(alpha=c(0,0.25,0.5,0.75,1), lambda=seq(0.0001, 0.1, length=20)), preProcess="medianImpute", trControl=myControl)
 
-try randome forest
+plot(model_1)
+model_1
+```
+From calling model_1 on the console, I found the RMSE for alpha=0.5 and lambda=0.07896842, is 3.270547. Nowhere better than full model...
+
+####ranger
+try a randome forest
 ```{r}
 model_2 <- train(x=TV, y=TL$poverty_rate, method="ranger", tuneLength=10, trControl=myControl, preProcess="medianImpute")
 
 plot(model_2)
 ```
+Resulting in RMSE=3.148711. Similar to the full linear model.
 
-try xgboost
+####xbgTree
+try xgboost.
 ```{r}
 model_3 <- train(x=TV, y=TL$poverty_rate, method="xgbTree", trControl=myControl, preProcess="medianImpute")
 
